@@ -12,3 +12,7 @@
 
 ## ✨学习目标
 夯实Java后端基础，积累项目经验，寻找后端开发实习。
+
+##其他
+一个超级简单的图片压缩小项目
+https://li-dev2026.github.io/java-learning-demo/image-compress.html
