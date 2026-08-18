@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地图片压缩工具</title>
+    <style>
+        * {box-sizing: border-box;font-family:system-ui}
+        body{max-width:820px;margin:40px auto;padding:0 20px;background:#f5f7fa;}
+        .box{background:#fff;padding:32px;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.12);}
+        .area{border:2px dashed #4080ff;border-radius:10px;padding:48px;text-align:center;margin-bottom:24px;color:#4080ff;user-select:none;}
+        .area.active{background:#e8f0ff;}
+        input[type=range]{width:100%;margin:8px 0;}
+        .row{margin:20px 0;}
+        button{background:#238636;color:#fff;border:none;padding:11px 24px;border-radius:7px;font-size:15px;cursor:pointer;margin:0 6px 6px 0;}
+        button:disabled{background:#94a3b8;cursor:not-allowed;}
+        #preview{max-width:100%;margin-top:18px;border-radius:8px;display:block;}
+        .info{color:#475569;font-size:14px;line-height:1.6;}
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>🖼️本地图片压缩（浏览器内完成，不上传网络）</h2>
+    <div class="area" id="dropArea">
+        点击此处 / 拖拽图片到这里
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+    </div>
+
+    <div class="row">
+        <label>压缩质量：<span id="qualityText">0.60</span></label>
+        <input type="range" id="quality" min="0.1" max="0.95" step="0.05" value="0.6">
+    </div>
+
+    <div class="info">
+        <div>原图大小：<span id="originSize">-</span></div>
+        <div>压缩后大小：<span id="outputSize">-</span></div>
+    </div>
+
+    <div style="margin:16px 0;">
+        <button id="compressBtn" disabled>开始压缩</button>
+        <button id="downloadBtn" disabled>下载压缩图片</button>
+    </div>
+
+    <img id="preview">
+</div>
+
+<script>
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
+const qualitySlider = document.getElementById('quality');
+const qualityText = document.getElementById('qualityText');
+const compressBtn = document.getElementById('compressBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const preview = document.getElementById('preview');
+const originSizeEl = document.getElementById('originSize');
+const outputSizeEl = document.getElementById('outputSize');
+
+let originFile = null;
+let compressedBlob = null;
+
+qualitySlider.oninput = function(){
+    qualityText.textContent = qualitySlider.value;
+};
+
+dropArea.onclick = function(){
+    fileInput.click();
+};
+
+fileInput.onchange = function(e){
+    const files = e.target.files;
+    if(files.length>0){
+        handleFile(files[0]);
+    }
+};
+
+dropArea.ondragover = function(e){
+    e.preventDefault();
+    dropArea.classList.add("active");
+};
+dropArea.ondragleave = function(){
+    dropArea.classList.remove("active");
+};
+dropArea.ondrop = function(e){
+    e.preventDefault();
+    dropArea.classList.remove("active");
+    const files = e.dataTransfer.files;
+    if(files.length>0){
+        handleFile(files[0]);
+    }
+};
+
+function formatByte(bytes){
+    if(bytes < 1024) return bytes + ' B';
+    else if(bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / (1024*1024)).toFixed(2) + ' MB';
+}
+
+function handleFile(file){
+    if(!file.type.startsWith('image/')){
+        alert('请选择图片(jpg/png/webp)');
+        return;
+    }
+    originFile = file;
+    compressedBlob = null;
+    preview.src = '';
+    outputSizeEl.textContent = '-';
+    originSizeEl.textContent = formatByte(file.size);
+    compressBtn.disabled = false;
+    downloadBtn.disabled = true;
+}
+
+compressBtn.onclick = async function(){
+    if(!originFile) return;
+    const img = new Image();
+    img.src = URL.createObjectURL(originFile);
+    await new Promise(resolve=>{img.onload = resolve;});
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img,0,0);
+
+    canvas.toBlob(function(blob){
+        if(!blob){
+            alert("压缩失败");
+            return;
+        }
+        compressedBlob = blob;
+        outputSizeEl.textContent = formatByte(blob.size);
+        preview.src = URL.createObjectURL(blob);
+        downloadBtn.disabled = false;
+    }, 'image/jpeg', Number(qualitySlider.value));
+};
+
+downloadBtn.onclick = function(){
+    if(!compressedBlob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(compressedBlob);
+    a.download = "compressed.jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+</script>
+</body>
+</html>
